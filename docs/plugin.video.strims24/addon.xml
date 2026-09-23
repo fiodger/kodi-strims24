@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<addon id="plugin.video.strims24" name="Strims24 — transmisje" version="0.1.2" provider-name="Local">
+  <requires><import addon="xbmc.python" version="3.0.0" /></requires>
+  <extension point="xbmc.python.pluginsource" library="default.py"><provides>video</provides></extension>
+  <extension point="xbmc.addon.metadata">
+    <summary lang="pl_PL">Wydarzenia i zewnętrzne źródła Strims24</summary>
+    <description lang="pl_PL">Nieoficjalny dodatek testowy. Natywne odtwarzanie bezpośrednich źródeł HLS; źródła wymagające JavaScript lub DRM nie są obsługiwane.</description>
+    <platform>all</platform><license>MIT</license>
+  </extension>
+</addon>
