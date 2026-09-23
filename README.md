@@ -5,7 +5,9 @@ również na Android TV. Wersja **0.1.2**.
 
 ## Instalacja
 
-Pobierz `dist/plugin.video.strims24-0.1.2.zip`, a w Kodi wybierz
+Dodaj w menedżerze plików Kodi źródło **https://fiodger.github.io/kodi-strims24/**. Następnie wybierz **Dodatki → Zainstaluj z pliku ZIP**, otwórz źródło i zainstaluj `repository.fiodger.strims24-1.0.0.zip`. Dalej: **Zainstaluj z repozytorium → Fiodger - Strims24 → Dodatki wideo → Strims24 — transmisje**. Repozytorium umożliwia pobieranie przyszłych opublikowanych aktualizacji.
+
+Możesz też pobrać `dist/plugin.video.strims24-0.1.2.zip`, a w Kodi wybrać
 **Dodatki → Zainstaluj z pliku ZIP**. Ten sam ZIP służy do aktualizacji.
 
 ## Obsługa
@@ -42,5 +44,7 @@ adapter fragmentów oraz zbiorczą kategorię live. Krótki test rzeczywistej
 transmisji kolarskiej wykonano w Kodi na Windows; użytkownik potwierdził
 działanie wersji 0.1.1. Wersja 0.1.2 dodaje listę live i kolorowe godziny.
 
-Repozytorium zawiera kod i ZIP dodatku. Nie jest automatycznym repozytorium
-aktualizacji Kodi. Projekt nie jest powiązany z administracją Strims24.
+Repozytorium zawiera kod, ZIP dodatku i publiczne źródło aktualizacji Kodi. Projekt nie jest powiązany z administracją Strims24.
+
+## Publikowanie aktualizacji
+Po zmianie wersji w addon.xml uruchom `python build_repository.py` i opublikuj zaktualizowane katalogi docs oraz dist. GitHub Pages serwuje katalog docs z gałęzi main. Format repozytorium: https://kodi.wiki/view/Add-on_repositories
