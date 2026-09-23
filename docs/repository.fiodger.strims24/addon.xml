@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<addon id="repository.fiodger.strims24" name="Fiodger - Strims24" version="1.0.0" provider-name="fiodger">
+  <extension point="xbmc.addon.repository" name="Fiodger - Strims24">
+    <dir>
+      <info>https://fiodger.github.io/kodi-strims24/addons.xml</info>
+      <checksum>https://fiodger.github.io/kodi-strims24/addons.xml.md5</checksum>
+      <datadir>https://fiodger.github.io/kodi-strims24/</datadir>
+      <hashes>false</hashes>
+    </dir>
+  </extension>
+  <extension point="xbmc.addon.metadata">
+    <summary lang="pl_PL">Repozytorium dodatku Strims24</summary>
+    <description lang="pl_PL">Instalacja i aktualizacje dodatku Strims24 dla Kodi 19+.</description>
+    <platform>all</platform><license>MIT</license>
+  </extension>
+</addon>
