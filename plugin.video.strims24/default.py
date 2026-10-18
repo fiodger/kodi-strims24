@@ -89,7 +89,7 @@ def main():
                 proxy.close()
             return
         elif action == 'logs':
-            text = 'Wersja testowa: odtwarza bezpośredni HLS. Brak obsługi JavaScript, CAPTCHA i DRM.\n\n'
+            text = 'Strims24 / Capitan Strims: HLS i playlisty echo przez WSS. Brak obsługi dowolnego JavaScript, CAPTCHA i DRM.\n\n'
             if os.path.exists(LOG):
                 with open(LOG, encoding='utf-8') as f: text += f.read()[-8000:]
             xbmcgui.Dialog().textviewer('Strims24 — diagnostyka', text)

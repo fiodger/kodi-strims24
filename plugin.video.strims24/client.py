@@ -9,17 +9,19 @@ import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
-BASE = 'https://strims24.pl'
-PLAYER = 'https://iplayer.is'
+BASE = 'https://capitanstrims.st'
+PLAYER = 'https://iplayer24.me'
 FEED = 'https://1.newsoccers.one/2/x/feed'
-UA = 'Mozilla/5.0 (Kodi; Strims24/0.1.2)'
+UA = 'Mozilla/5.0 (Kodi; Strims24/0.1.3)'
 SPORTS = {'football': ('Piłka nożna', 1), 'tennis': ('Tenis', 2),
           'basketball': ('Koszykówka', 3), 'hockey': ('Hokej', 4),
           'volleyball': ('Siatkówka', 12), 'handball': ('Piłka ręczna', 7),
           'mma': ('MMA', 28), 'boxing': ('Boks', 16), 'nfl': ('NFL', 5),
           'snooker': ('Snooker', 15), 'darts': ('Dart', 14), 'futsal': ('Futsal', 11),
           'cycling': ('Kolarstwo', 34), 'baseball': ('Baseball', 6),
-          'cricket': ('Krykiet', 13), 'golf': ('Golf', 23)}
+          'cricket': ('Krykiet', 13), 'golf': ('Golf', 23),
+          'winter-sports': ('Sporty zimowe', 37),
+          'motorsport': ('Sporty motorowe', 31), 'waterpolo': ('Piłka wodna', 0)}
 
 
 class SiteError(Exception):
@@ -45,6 +47,8 @@ def request(url, referer=BASE + '/', feed=False):
                 raise SiteError('Odpowiedź źródła jest zbyt duża.')
             return body.decode('utf-8-sig', 'replace'), r.headers.get('Content-Type', ''), r.url
     except urllib.error.HTTPError as e:
+        if e.code == 403:
+            raise SiteError('%s: HTTP 403. Serwis odrzucił połączenie; może wymagać weryfikacji przeglądarki.' % urllib.parse.urlsplit(url).hostname)
         raise SiteError('%s: HTTP %s. Źródło jest niedostępne.' % (urllib.parse.urlsplit(url).hostname, e.code))
     except (urllib.error.URLError, OSError):
         raise SiteError('Nie udało się połączyć z %s.' % urllib.parse.urlsplit(url).hostname)
@@ -97,13 +101,8 @@ class Client:
         self.channels_loaded = False
 
     def load_channels(self):
-        if self.channels_loaded:
-            return
-        try:
-            data = get_json('/channels')
-            self.channels = data if isinstance(data, list) else data.get('items', data.get('channels', []))
-        except SiteError:
-            self.warnings.append('Katalog kanałów serwisu jest niedostępny. Pokazuję wydarzenia dodane bezpośrednio przez serwis.')
+        # Capitan's current frontend disables this catalog. Sources are listed
+        # in each match's custom_urls, so /channels must no longer be requested.
         self.channels_loaded = True
 
     def live_events(self):
@@ -136,11 +135,14 @@ class Client:
         if sport not in SPORTS:
             raise SiteError('Nieznana dyscyplina.')
         self.load_channels()
-        today = datetime.datetime.now(datetime.timezone.utc).date()
+        today = datetime.date.today()
         offsets = [1] if tomorrow else [-1, 0]
         def load(offset):
             day = today + datetime.timedelta(days=offset)
-            backend = get_json('/api/v1/%s/%s' % (sport, day.isoformat())).get('items', [])
+            slug = 'american-football' if sport == 'nfl' else sport
+            backend = get_json('/api/v1/%s/%s' % (slug, day.isoformat())).get('items', [])
+            if not SPORTS[sport][1]:
+                return backend, {}, None
             try:
                 raw, _, _ = request('%s/f_%s_%s_2_en_1' % (FEED, SPORTS[sport][1], offset), feed=True)
                 return backend, feed_events(raw), None
@@ -212,8 +214,12 @@ class PlayerHTML(HTMLParser):
 
 def resolve(url, referer=BASE + '/', seen=None):
     parsed = urllib.parse.urlsplit(url)
+    # Existing Kodi favourites/history may still point to the former player.
+    if parsed.hostname == 'iplayer.is':
+        url = urllib.parse.urlunsplit(('https', 'iplayer24.me', parsed.path, parsed.query, ''))
+        parsed = urllib.parse.urlsplit(url)
     # Repair playback items left in Kodi history from version 0.1.0.
-    if parsed.hostname == 'iplayer.is' and re.fullmatch(r'/[a-fA-F0-9]{32}', parsed.path):
+    if parsed.hostname == 'iplayer24.me' and re.fullmatch(r'/[a-fA-F0-9]{32}', parsed.path):
         url = player_url(parsed.path[1:])
     seen = set() if seen is None else seen
     safe_url(url)
@@ -227,6 +233,12 @@ def resolve(url, referer=BASE + '/', seen=None):
         return final_url, referer
     if 'dash+xml' in kind or '<MPD' in text:
         raise SiteError('Źródło DASH nie jest obsługiwane w tej wersji.')
+    # The new echo player receives HLS text over WSS and exposes a virtual
+    # /bloop/ manifest through a service worker. Kodi uses our local adapter.
+    ws = re.search(r'''\bvar\s+WS_BASE\s*=\s*["'](wss://[^"']+)["']''', text)
+    token = re.search(r'''\bvar\s+TOKEN\s*=\s*["']([a-fA-F0-9]{32})["']''', text)
+    if ws and token and '/bloop/' in text:
+        return ws[1] + '#' + token[1], final_url
     parser = PlayerHTML()
     parser.feed(text)
     # Read literal media URLs only; never execute scripts from external hosts.

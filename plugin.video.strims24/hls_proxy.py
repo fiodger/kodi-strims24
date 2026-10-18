@@ -35,6 +35,12 @@ class Proxy:
         self.playlists = set()
         self.lock = threading.Lock()
         self.closed = False
+        self.feed = None
+        if url.startswith('wss://'):
+            from live_playlist import PlaylistFeed
+            self.feed = PlaylistFeed(url, referer)
+            url = urllib.parse.urljoin(referer, '/bloop/' + self.feed.parts.fragment + '.m3u8')
+        self.manifest_url = url
         proxy = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -53,12 +59,16 @@ class Proxy:
                 if upstream is None:
                     self.send_error(404); return
                 try:
-                    req = urllib.request.Request(upstream, headers={
-                        'User-Agent': UA, 'Referer': proxy.referer, 'Accept-Encoding': 'identity'})
-                    with urllib.request.urlopen(req, timeout=15) as response:
-                        data = response.read(16 * 1024 * 1024 + 1)
-                        final = response.url
-                        kind = response.headers.get('Content-Type', 'application/octet-stream')
+                    if proxy.feed and upstream == proxy.manifest_url:
+                        data = proxy.feed.snapshot().encode('utf-8')
+                        final, kind = upstream, 'application/vnd.apple.mpegurl'
+                    else:
+                        req = urllib.request.Request(upstream, headers={
+                            'User-Agent': UA, 'Referer': proxy.referer, 'Accept-Encoding': 'identity'})
+                        with urllib.request.urlopen(req, timeout=15) as response:
+                            data = response.read(16 * 1024 * 1024 + 1)
+                            final = response.url
+                            kind = response.headers.get('Content-Type', 'application/octet-stream')
                     if len(data) > 16 * 1024 * 1024:
                         raise ValueError('Oversized media response')
                     if data.lstrip().startswith(b'#EXTM3U'):
@@ -85,6 +95,8 @@ class Proxy:
         self.server.daemon_threads = True
         self.base = 'http://127.0.0.1:%s/%s/' % (self.server.server_port, self.key)
         self.url = self.register(url)
+        if self.feed:
+            self.playlists.add(self.url.rsplit('/', 1)[-1])
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
 
     def register(self, url):
@@ -114,11 +126,17 @@ class Proxy:
         return '\n'.join(lines) + '\n'
 
     def start(self):
+        if self.feed:
+            self.feed.start()
         self.thread.start()
         return self.url
 
     def close(self):
         self.closed = True
-        self.server.shutdown()
+        if self.feed:
+            self.feed.close()
+        if self.thread.ident is not None:
+            self.server.shutdown()
         self.server.server_close()
-        self.thread.join(timeout=2)
+        if self.thread.ident is not None:
+            self.thread.join(timeout=2)
